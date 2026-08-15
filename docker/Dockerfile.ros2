@@ -1,0 +1,31 @@
+# ROS2 Humble image: colcon-builds the workspace WITH the core package
+# properly installed, so `ros2 run edge_perception_ros perception_node`
+# works with no PYTHONPATH tricks.
+#
+#   docker build -f docker/Dockerfile.ros2 -t edge-perception:ros2 .
+#   docker run --rm -it edge-perception:ros2                     # bash
+#   # inside: source /opt/ws/install/setup.bash is already done via entrypoint
+#   #   ros2 launch edge_perception_ros edge_bot_sim.launch.py   (needs GUI/X)
+#   #   ros2 run edge_perception_ros perception_node --ros-args -p backend:=mock
+FROM ros:humble-ros-base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip \
+    ros-humble-vision-msgs ros-humble-cv-bridge \
+    ros-humble-xacro ros-humble-robot-state-publisher \
+    libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+# Gazebo (large) is optional; install for full sim:
+#   apt-get install -y ros-humble-gazebo-ros-pkgs
+
+WORKDIR /opt/ws
+COPY pyproject.toml README.md LICENSE ./core/
+COPY edge_perception ./core/edge_perception
+RUN pip3 install --no-cache-dir ./core          # installs edge-perception
+
+COPY ros2_ws/src ./src
+RUN . /opt/ros/humble/setup.sh && colcon build --symlink-install
+
+COPY docker/ros2_entrypoint.sh /ros2_entrypoint.sh
+RUN chmod +x /ros2_entrypoint.sh
+ENTRYPOINT ["/ros2_entrypoint.sh"]
+CMD ["bash"]

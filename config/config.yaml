@@ -1,0 +1,28 @@
+# Adaptive Edge AI Perception Engine — runtime configuration
+#
+# Tune thresholds per platform. Values below target a Jetson Orin Nano;
+# on a laptop you can raise target_fps.
+
+scheduler:
+  target_fps: 15.0          # desired steady-state pipeline FPS
+  min_fps: 4.0              # hard floor -> DEGRADED (CRITICAL)
+  risk_alert: 0.35          # fused scene risk to enter ALERT
+  risk_engaged: 0.55        # fused scene risk to enter ENGAGED
+  conf_second_opinion: 0.45 # a detection below this confidence triggers ALERT
+  cooldown_frames: 20       # calm frames before attention de-escalates
+  resource_recovery_frames: 10  # healthy frames before leaving DEGRADED
+  gpu_high: 92.0            # GPU % treated as saturation
+
+  # model plan per ATTENTION level (DEGRADED always uses the minimal plan)
+  plans:
+    PATROL:   [yolo_nano]
+    ALERT:    [yolo_small, midas_small]
+    ENGAGED:  [yolo_large, yolo_nano_seg, midas_small, yolo_pose]
+
+pipeline:
+  device: cpu               # cpu | cuda | cuda:0
+  backend: auto             # auto | real | mock
+
+ros2:
+  publish_rate_hz: 15
+  frame_id: camera_link

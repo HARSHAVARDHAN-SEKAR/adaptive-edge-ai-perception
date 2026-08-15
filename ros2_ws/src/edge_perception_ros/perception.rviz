@@ -1,0 +1,19 @@
+# Minimal RViz config. Detection2DArray overlays require the separate
+# vision_msgs_rviz_plugins package (ros-perception/vision_msgs); the base
+# rviz_default_plugins set has no Detection2DArray display, so this config
+# shows the camera image and TF only.
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Global Options:
+    Fixed Frame: base_link
+  Displays:
+    - Class: rviz_default_plugins/Image
+      Name: Camera
+      Topic:
+        Value: /camera/image_raw
+      Enabled: true
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true

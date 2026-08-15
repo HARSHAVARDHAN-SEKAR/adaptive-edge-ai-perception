@@ -1,0 +1,30 @@
+# One-command usage on any Linux machine with Docker:
+#   docker compose up dashboard     # -> http://localhost:8090
+#   docker compose run demo         # console mission demo
+#   docker compose run test         # test suite
+#   docker compose run bench        # experiments
+services:
+  dashboard:
+    build: { context: ., dockerfile: docker/Dockerfile, target: lite }
+    ports: ["8090:8090"]
+    command: dashboard
+  demo:
+    build: { context: ., dockerfile: docker/Dockerfile, target: lite }
+    command: demo
+  test:
+    build: { context: ., dockerfile: docker/Dockerfile, target: lite }
+    command: test
+  bench:
+    build: { context: ., dockerfile: docker/Dockerfile, target: lite }
+    command: bench
+    volumes: ["./assets:/app/assets"]
+  # real models on CPU (add `--gpus all` / deploy.resources for CUDA)
+  full:
+    build: { context: ., dockerfile: docker/Dockerfile, target: full }
+    ports: ["8090:8090"]
+    command: real-dashboard
+    environment: { SOURCE: synthetic, DEVICE: cpu }
+  # ROS2 Humble workspace: colcon-built, core package pip-installed
+  ros2:
+    build: { context: ., dockerfile: docker/Dockerfile.ros2 }
+    command: ros2 run edge_perception_ros perception_node --ros-args -p backend:=mock

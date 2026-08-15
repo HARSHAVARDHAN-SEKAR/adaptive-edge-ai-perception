@@ -1,0 +1,72 @@
+[
+  {
+    "model": "midas_small",
+    "task": "depth",
+    "backend": "mock",
+    "fps": 28.0,
+    "latency_p50_ms": 36.18,
+    "latency_p95_ms": 41.49,
+    "load_time_s": 0.0,
+    "rss_delta_mb": 2.1
+  },
+  {
+    "model": "vlm_scene",
+    "task": "describe",
+    "backend": "mock",
+    "fps": 5.4,
+    "latency_p50_ms": 187.56,
+    "latency_p95_ms": 233.15,
+    "load_time_s": 0.0,
+    "rss_delta_mb": 0.0
+  },
+  {
+    "model": "yolo_large",
+    "task": "detect",
+    "backend": "mock",
+    "fps": 14.5,
+    "latency_p50_ms": 67.47,
+    "latency_p95_ms": 79.58,
+    "load_time_s": 0.0,
+    "rss_delta_mb": 0.0
+  },
+  {
+    "model": "yolo_nano",
+    "task": "detect",
+    "backend": "mock",
+    "fps": 62.5,
+    "latency_p50_ms": 15.65,
+    "latency_p95_ms": 18.15,
+    "load_time_s": 0.0,
+    "rss_delta_mb": 0.0
+  },
+  {
+    "model": "yolo_nano_seg",
+    "task": "segment",
+    "backend": "mock",
+    "fps": 21.7,
+    "latency_p50_ms": 46.04,
+    "latency_p95_ms": 55.03,
+    "load_time_s": 0.0,
+    "rss_delta_mb": 8.5
+  },
+  {
+    "model": "yolo_pose",
+    "task": "pose",
+    "backend": "mock",
+    "fps": 47.3,
+    "latency_p50_ms": 21.18,
+    "latency_p95_ms": 23.58,
+    "load_time_s": 0.0,
+    "rss_delta_mb": 2.3
+  },
+  {
+    "model": "yolo_small",
+    "task": "detect",
+    "backend": "mock",
+    "fps": 36.9,
+    "latency_p50_ms": 27.0,
+    "latency_p95_ms": 33.5,
+    "load_time_s": 0.0,
+    "rss_delta_mb": 0.0
+  }
+]

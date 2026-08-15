@@ -1,0 +1,76 @@
+{
+  "input_kind": "synthetic",
+  "requested_backend": "mock",
+  "backends": {
+    "yolo_nano": {
+      "requested": "mock",
+      "actual": "mock"
+    },
+    "yolo_large": {
+      "requested": "mock",
+      "actual": "mock"
+    },
+    "yolo_nano_seg": {
+      "requested": "mock",
+      "actual": "mock"
+    },
+    "midas_small": {
+      "requested": "mock",
+      "actual": "mock"
+    },
+    "yolo_pose": {
+      "requested": "mock",
+      "actual": "mock"
+    },
+    "vlm_scene": {
+      "requested": "mock",
+      "actual": "mock"
+    }
+  },
+  "before_detection_only": [
+    "person detected",
+    "chair detected",
+    "chair detected",
+    "backpack detected"
+  ],
+  "after_multi_model_fusion": [
+    {
+      "object": "person",
+      "rel_depth": 0.328,
+      "depth_scale": "relative",
+      "activity": "upright",
+      "approaching": false,
+      "collision_risk_pct": 40,
+      "decision_confidence": 0.81
+    },
+    {
+      "object": "chair",
+      "rel_depth": 0.69,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 14,
+      "decision_confidence": 0.72
+    },
+    {
+      "object": "chair",
+      "rel_depth": 0.493,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 20,
+      "decision_confidence": 0.72
+    },
+    {
+      "object": "backpack",
+      "rel_depth": 0.598,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 19,
+      "decision_confidence": 0.71
+    }
+  ],
+  "vlm_scene_narration": "A person is visible nearby and may partially block the planned path.",
+  "note": "Relative depth is a normalized monocular depth cue (0=near, 1=far); it is not metric distance."
+}

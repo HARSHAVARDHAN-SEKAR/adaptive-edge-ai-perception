@@ -1,0 +1,10 @@
+# Laptop development (Phase 1-3)
+numpy>=1.24
+opencv-python>=4.8         # use opencv-python-headless on servers/CI
+psutil>=5.9
+pyyaml>=6.0
+ultralytics>=8.2           # YOLO detect/seg/pose (pulls torch)
+onnx>=1.15
+# optional:
+# pynvml                   # NVIDIA GPU telemetry on laptop
+# onnxruntime-gpu          # ONNX benchmarking with CUDA

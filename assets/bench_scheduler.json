@@ -1,0 +1,56 @@
+{
+  "config": {
+    "frames": 120,
+    "events": [
+      [
+        30,
+        41
+      ],
+      [
+        80,
+        91
+      ]
+    ],
+    "frame_size": [
+      120,
+      160
+    ],
+    "backend": "mock",
+    "seed": 7
+  },
+  "results": [
+    {
+      "system": "fixed_heavy",
+      "mean_fps": 6.7,
+      "fps_std": 0.12,
+      "latency_mean_ms": 148.7,
+      "latency_p95_ms": 169.1,
+      "cost_proxy_units": 1440,
+      "event_full_suite_coverage": 1.0,
+      "high_risk_full_suite_coverage": 1.0,
+      "mode_switches": 0
+    },
+    {
+      "system": "fixed_light",
+      "mean_fps": 89.8,
+      "fps_std": 2.72,
+      "latency_mean_ms": 11.0,
+      "latency_p95_ms": 13.5,
+      "cost_proxy_units": 120,
+      "event_full_suite_coverage": 0.0,
+      "high_risk_full_suite_coverage": 0.0,
+      "mode_switches": 0
+    },
+    {
+      "system": "adaptive",
+      "mean_fps": 33.0,
+      "fps_std": 35.08,
+      "latency_mean_ms": 92.5,
+      "latency_p95_ms": 169.0,
+      "cost_proxy_units": 885,
+      "event_full_suite_coverage": 0.64,
+      "high_risk_full_suite_coverage": 0.87,
+      "mode_switches": 5
+    }
+  ]
+}

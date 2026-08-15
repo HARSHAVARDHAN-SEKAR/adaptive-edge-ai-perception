@@ -1,0 +1,9 @@
+# Jetson deployment (Phase 4) - install on top of JetPack.
+# TensorRT, CUDA, cuDNN and OpenCV are provided by JetPack; do not replace
+# JetPack's OpenCV with pip opencv-python unless you know you need to.
+numpy
+psutil
+pyyaml
+ultralytics
+pycuda                     # INT8 calibration
+jetson-stats               # jtop power/GPU telemetry

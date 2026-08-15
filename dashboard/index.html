@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perception Engine — Telemetry</title>
+<style>
+  :root{
+    --bg:#14181d; --panel:#1c2229; --line:#2a323b;
+    --ink:#c9d2da; --mute:#6b7785;
+    --teal:#59b8b2; --amber:#e5a23c; --red:#d96a5a; --violet:#8f7fd4;
+    --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+    --sans:"Archivo","Inter",system-ui,sans-serif;
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);padding:20px;max-width:1080px;margin:0 auto}
+  header{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+  h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  #mode-pill{font-family:var(--mono);font-size:13px;padding:3px 12px;border-radius:3px;border:1px solid var(--line)}
+  .PATROL{color:var(--teal);border-color:var(--teal)}
+  .ALERT{color:var(--amber);border-color:var(--amber)}
+  .ENGAGED{color:var(--red);border-color:var(--red)}
+  .DEGRADED{color:var(--violet);border-color:var(--violet)}
+  #clock{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mute)}
+
+  /* signature: attention timeline — the scheduler's EEG */
+  .strip-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);margin-bottom:5px}
+  #timeline{display:flex;height:26px;border:1px solid var(--line);border-radius:2px;overflow:hidden;margin-bottom:20px}
+  #timeline div{flex:1 0 2px}
+  .t-PATROL{background:#204a48}.t-ALERT{background:#6e5122}.t-ENGAGED{background:#6e352c}.t-DEGRADED{background:#453a6b}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+  .panel h2{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);font-weight:600;margin-bottom:10px}
+  .big{font-family:var(--mono);font-size:30px;line-height:1.1}
+  .unit{font-size:12px;color:var(--mute);margin-left:4px}
+  .kv{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;padding:3px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:0}
+  .kv .v{color:var(--teal)}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  th{color:var(--mute);font-weight:400;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+  td{padding:4px 6px;border-bottom:1px solid var(--line)}
+  .risk-hi{color:var(--red)} .risk-md{color:var(--amber)} .risk-lo{color:var(--teal)}
+  #switches li{font-family:var(--mono);font-size:11px;color:var(--mute);padding:3px 0;list-style:none}
+  #switches b{font-weight:600}
+  .wide{grid-column:1/-1}
+  footer{margin-top:18px;color:var(--mute);font-size:11px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Adaptive Edge Perception</h1>
+  <span id="mode-pill" class="PATROL">PATROL</span>
+  <span id="clock">—</span>
+</header>
+
+<div class="strip-label">Attention timeline · last 400 frames</div>
+<div id="timeline" aria-label="scheduler mode history"></div>
+
+<div class="grid">
+  <div class="panel"><h2>Pipeline FPS</h2><div class="big" id="fps">—</div></div>
+  <div class="panel"><h2>Frame latency</h2><div class="big" id="lat">—<span class="unit">ms</span></div></div>
+  <div class="panel"><h2>Scene risk</h2><div class="big" id="risk">—</div></div>
+  <div class="panel"><h2>Decision confidence</h2><div class="big" id="conf">—</div></div>
+
+  <div class="panel">
+    <h2>Active models</h2>
+    <div id="models"></div>
+  </div>
+  <div class="panel">
+    <h2>Compute</h2>
+    <div class="kv"><span>CPU</span><span class="v" id="cpu">—</span></div>
+    <div class="kv"><span>RAM</span><span class="v" id="ram">—</span></div>
+    <div class="kv"><span>GPU</span><span class="v" id="gpu">—</span></div>
+    <div class="kv"><span>Power</span><span class="v" id="pwr">—</span></div>
+  </div>
+  <div class="panel">
+    <h2>Mode switches</h2>
+    <ul id="switches"><li>none yet</li></ul>
+  </div>
+
+  <div class="panel wide" id="narration-panel" style="display:none">
+    <h2>Scene narration (VLM)</h2>
+    <div id="narration" style="font-family:var(--mono);font-size:13px;color:var(--amber)"></div>
+  </div>
+
+  <div class="panel wide">
+    <h2>Tracked objects</h2>
+    <table>
+      <thead><tr><th>id</th><th>label</th><th>conf</th><th>rel depth</th><th>activity</th><th>mask</th><th>risk</th></tr></thead>
+      <tbody id="objects"><tr><td colspan="7" style="color:var(--mute)">waiting for frames…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>polling /api/state · adaptive scheduler v0.1</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+function riskClass(r){ return r>=0.65?"risk-hi":r>=0.35?"risk-md":"risk-lo"; }
+
+async function poll(){
+  try{
+    const s = await (await fetch("/api/state")).json();
+    if(!s.latest){ return; }
+    const L = s.latest;
+    $("mode-pill").textContent = L.mode;
+    $("mode-pill").className = L.mode;
+    $("clock").textContent = new Date().toLocaleTimeString();
+    $("fps").textContent = L.fps.toFixed(1);
+    $("lat").innerHTML = L.total_latency_ms.toFixed(0)+'<span class="unit">ms</span>';
+    $("risk").textContent = L.scene.scene_risk.toFixed(2);
+    $("risk").className = "big "+riskClass(L.scene.scene_risk);
+    $("conf").textContent = L.decision_confidence==null?"—":L.decision_confidence.toFixed(2);
+
+    $("models").innerHTML = L.models.map(m=>{
+      const ms = L.model_latencies_ms[m];
+      return `<div class="kv"><span>${m}</span><span class="v">${ms!=null?ms.toFixed(1)+" ms":""}</span></div>`;
+    }).join("");
+
+    const R = L.resources||{};
+    const fmt=(v,u)=>(v==null||v<0)?"n/a":v.toFixed(0)+u;
+    $("cpu").textContent = fmt(R.cpu_percent,"%");
+    $("ram").textContent = fmt(R.ram_percent,"%");
+    $("gpu").textContent = fmt(R.gpu_percent,"%");
+    $("pwr").textContent = fmt(R.power_watts," W");
+
+    if (L.narration){
+      document.getElementById("narration-panel").style.display = "block";
+      $("narration").textContent = "\u201c" + L.narration + "\u201d";
+    }
+
+    $("timeline").innerHTML = s.history.map(h=>`<div class="t-${h.mode}" title="${h.mode} · ${h.fps} fps"></div>`).join("");
+
+    const objs = L.scene.objects;
+    $("objects").innerHTML = objs.length ? objs.map(o=>
+      `<tr><td>${o.object_id}</td><td>${o.label}</td><td>${o.confidence.toFixed(2)}</td>
+       <td>${o.rel_depth!=null?o.rel_depth.toFixed(2):"—"}</td><td>${o.activity}</td>
+       <td>${o.has_mask?"yes":"—"}</td>
+       <td class="${riskClass(o.risk)}">${o.risk.toFixed(2)}</td></tr>`).join("")
+      : '<tr><td colspan="7" style="color:var(--mute)">scene clear</td></tr>';
+
+    $("switches").innerHTML = (s.switches||[]).slice(-8).reverse().map(w=>
+      `<li><b class="${w.mode}">${w.mode}</b> — ${w.reason}</li>`).join("") || "<li>none yet</li>";
+  }catch(e){ /* server warming up */ }
+}
+setInterval(poll, 500); poll();
+</script>
+</body>
+</html>
