@@ -18,5 +18,5 @@ ENTRYPOINT ["./docker/entrypoint.sh"]
 CMD ["dashboard"]
 
 FROM lite AS full
-RUN pip install --no-cache-dir ultralytics onnx onnxruntime
+RUN pip install --no-cache-dir -e ".[real]"
 RUN python tests/test_pipeline.py

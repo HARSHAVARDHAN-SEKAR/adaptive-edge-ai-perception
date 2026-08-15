@@ -1,5 +1,7 @@
 name: ci
+
 on: [push, pull_request]
+
 permissions:
   contents: read
 
@@ -7,52 +9,84 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
-      matrix: { python: ["3.10", "3.11", "3.12"] }
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
-        with: { python-version: "${{ matrix.python }}" }
-      - run: pip install -e ".[dev]"
-      - run: ruff check edge_perception benchmark tests
+        with:
+          python-version: "${{ matrix.python }}"
+
+      - name: Install package
+        run: pip install -e ".[dev]"
+
+      - name: Ruff
+        run: ruff check edge_perception benchmark tests
+
       - name: unit + scheduler + backend tests
         run: python tests/test_pipeline.py
+
       - name: ROS2 node logic simulation
         run: python tests/test_ros2_node_sim.py
+
       - name: CLI smoke test
         run: python run_pipeline.py --source synthetic --frames 120 --backend mock
+
       - name: benchmark smoke test
         run: python -m benchmark.latency_test --frames 120 --out /tmp/b.md
+
       - name: dashboard API smoke test
         run: |
           python dashboard/server.py --port 8091 &
           sleep 8
-          curl -sf localhost:8091/api/state | python -c "import json,sys; d=json.load(sys.stdin); assert d['health']['pipeline_alive']; print('dashboard ok')"
+          curl -sf localhost:8091/api/state | \
+            python -c "import json,sys; d=json.load(sys.stdin); assert d['health']['pipeline_alive']; print('dashboard ok')"
+
       - name: PDF report generation
         run: python docs/make_report_pdf.py
 
   docker:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f docker/Dockerfile --target lite -t edge-perception:lite .
-      - run: docker run --rm edge-perception:lite test
-      - run: docker compose config -q
+
+      - name: Build lite Docker image
+        run: docker build -f docker/Dockerfile --target lite -t edge-perception:lite .
+
+      - name: Run Docker tests
+        run: docker run --rm edge-perception:lite test
+
+      - name: Validate compose
+        run: docker compose config -q
 
   ros2:
     runs-on: ubuntu-latest
     container: ros:humble-ros-base
+
     steps:
       - uses: actions/checkout@v4
+
       - name: deps
         run: |
-          apt-get update && apt-get install -y --no-install-recommends \
-            python3-pip ros-humble-vision-msgs ros-humble-cv-bridge \
-            ros-humble-xacro libgl1 libglib2.0-0
-          pip3 install --break-system-packages -e .
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3-pip \
+            ros-humble-vision-msgs \
+            ros-humble-cv-bridge \
+            ros-humble-xacro \
+            libgl1 \
+            libglib2.0-0
+          pip3 install -e .
+
       - name: colcon build
         run: |
           . /opt/ros/humble/setup.sh
-          cd ros2_ws && colcon build --symlink-install
+          cd ros2_ws
+          colcon build --symlink-install
+
       - name: node imports and URDF parses under real ROS
         run: |
           . /opt/ros/humble/setup.sh

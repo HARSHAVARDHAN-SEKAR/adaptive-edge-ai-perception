@@ -5,15 +5,23 @@
 #   Xavier, JetPack 5 / r35.x:    nvcr.io/nvidia/l4t-pytorch:r35.2.1-pth2.0-py3
 #   TX2/Nano, JetPack 4 / r32.7:  nvcr.io/nvidia/l4t-ml:r32.7.1-py3
 # This file targets Orin (r36.2). It is NOT universal across TX2/Xavier/Orin.
+
 ARG L4T_BASE=nvcr.io/nvidia/l4t-ml:r36.2.0-py3
 FROM ${L4T_BASE}
+
 WORKDIR /app
+
 COPY requirements-jetson.txt .
+
 # NOTE: do NOT pip-install opencv-python here — it would shadow the
 # CUDA-enabled OpenCV shipped with JetPack.
-RUN pip3 install --no-cache-dir ultralytics psutil pyyaml jetson-stats
+RUN pip3 install --no-cache-dir -r requirements-jetson.txt
+
 COPY . .
+
 # Build TensorRT engines at container start (device-specific):
 #   python3 -m edge_perception.optimizer.export_onnx --weights yolov8n.pt
-#   python3 -m edge_perception.optimizer.build_tensorrt --onnx engines/yolov8n.onnx --fp16
+#   python3 -m edge_perception.optimizer.build_tensorrt \
+#     --onnx engines/yolov8n.onnx --fp16
+
 CMD ["python3", "run_pipeline.py", "--source", "0", "--backend", "real", "--device", "cuda"]
