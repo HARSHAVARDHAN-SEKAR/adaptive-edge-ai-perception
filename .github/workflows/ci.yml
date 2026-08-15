@@ -79,7 +79,7 @@ jobs:
             ros-humble-xacro \
             libgl1 \
             libglib2.0-0
-          pip3 install -e .
+          pip3 install .
 
       - name: colcon build
         run: |
