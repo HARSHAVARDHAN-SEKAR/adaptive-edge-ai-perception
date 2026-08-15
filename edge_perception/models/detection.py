@@ -1,10 +1,18 @@
 """Object detection tier: YOLO nano / small / large (Ultralytics)."""
+
 from __future__ import annotations
 
 import numpy as np
 
-from .base import (Detection, ModelOutput, PerceptionModel, mock_rng, mock_sleep,
-                   mock_world, register)
+from .base import (
+    Detection,
+    ModelOutput,
+    PerceptionModel,
+    mock_rng,
+    mock_sleep,
+    mock_world,
+    register,
+)
 
 
 class _YoloBase(PerceptionModel):
@@ -12,10 +20,11 @@ class _YoloBase(PerceptionModel):
     weights: str = "yolov8n.pt"
     _mock_latency_ms: float = 12.0
     _mock_conf: float = 0.70
-    _mock_miss_far: float = 0.0     # chance to miss far/small objects (tiers)
+    _mock_miss_far: float = 0.0  # chance to miss far/small objects (tiers)
 
     def _load_real(self) -> bool:
         from ultralytics import YOLO
+
         self._model = YOLO(self.weights)
         return True
 
@@ -27,10 +36,13 @@ class _YoloBase(PerceptionModel):
         res = self._model.predict(frame_bgr, verbose=False, device=self.device)[0]
         names = res.names
         for b in res.boxes:
-            out.detections.append(Detection(
-                label=names[int(b.cls)],
-                confidence=float(b.conf),
-                box_xyxy=tuple(float(v) for v in b.xyxy[0].tolist())))
+            out.detections.append(
+                Detection(
+                    label=names[int(b.cls)],
+                    confidence=float(b.conf),
+                    box_xyxy=tuple(float(v) for v in b.xyxy[0].tolist()),
+                )
+            )
         return out
 
     def _infer_mock(self, frame_bgr: np.ndarray) -> ModelOutput:
@@ -43,10 +55,13 @@ class _YoloBase(PerceptionModel):
             if obj.rel_depth > 0.6 and rng.random() < self._mock_miss_far:
                 continue
             conf = self._mock_conf + (0.18 if obj.rel_depth < 0.3 else 0.0)
-            out.detections.append(Detection(
-                label=obj.label,
-                confidence=float(np.clip(rng.normal(conf, 0.05), 0.25, 0.97)),
-                box_xyxy=obj.box_xyxy))
+            out.detections.append(
+                Detection(
+                    label=obj.label,
+                    confidence=float(np.clip(rng.normal(conf, 0.05), 0.25, 0.97)),
+                    box_xyxy=obj.box_xyxy,
+                )
+            )
         return out
 
 

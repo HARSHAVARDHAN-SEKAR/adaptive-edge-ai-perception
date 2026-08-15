@@ -14,6 +14,7 @@ Examples:
     python -m benchmark.understanding_demo \
         --image assets/test_bus.jpg --backend real
 """
+
 from __future__ import annotations
 
 import argparse
@@ -23,8 +24,13 @@ from pathlib import Path
 from edge_perception.fusion.perception_fusion import PerceptionFusion
 from edge_perception.fusion.uncertainty import estimate
 from edge_perception.models import base as model_base
-from edge_perception.models import (depth, detection, pose, segmentation,  # noqa: F401
-                                    vlm)
+from edge_perception.models import (  # noqa: F401
+    depth,
+    detection,
+    pose,
+    segmentation,
+    vlm,
+)
 from edge_perception.sources import SyntheticSource
 
 
@@ -38,6 +44,7 @@ def main():
 
     if args.image:
         import cv2
+
         frame = cv2.imread(args.image)
         if frame is None:
             raise FileNotFoundError(f"could not read image: {args.image}")
@@ -63,27 +70,40 @@ def main():
     before = [f"{d.label} detected" for d in det_only.detections]
 
     # AFTER: full multi-model fusion
-    outputs = [run(n) for n in
-               ("yolo_large", "yolo_nano_seg", "midas_small", "yolo_pose")]
+    outputs = [
+        run(n) for n in ("yolo_large", "yolo_nano_seg", "midas_small", "yolo_pose")
+    ]
     fusion = PerceptionFusion()
     fusion.fuse(outputs, frame.shape)  # prime tracker
     scene = fusion.fuse(outputs, frame.shape)
-    narration = run("vlm_scene").extra.get("description", "")
+    try:
+        narration = run("vlm_scene").extra.get("description", "")
+    except model_base.BackendUnavailableError as exc:
+        narration = ""
+        backends["vlm_scene"] = {
+            "requested": args.backend,
+            "actual": "unavailable",
+            "error": str(exc),
+        }
+        print(f"[optional VLM skipped] {exc}")
 
     after = []
     depth_used = any(o.depth_map is not None for o in outputs)
     for o in scene.objects:
         conf = estimate(o, depth_used)
-        after.append({
-            "object": o.label,
-            "rel_depth": (round(o.rel_depth, 3)
-                          if o.rel_depth is not None else None),
-            "depth_scale": "relative",
-            "activity": o.activity,
-            "approaching": o.approaching,
-            "collision_risk_pct": round(100 * o.risk),
-            "decision_confidence": round(conf.decision_confidence, 2),
-        })
+        after.append(
+            {
+                "object": o.label,
+                "rel_depth": (
+                    round(o.rel_depth, 3) if o.rel_depth is not None else None
+                ),
+                "depth_scale": "relative",
+                "activity": o.activity,
+                "approaching": o.approaching,
+                "collision_risk_pct": round(100 * o.risk),
+                "decision_confidence": round(conf.decision_confidence, 2),
+            }
+        )
 
     result = {
         "input_kind": input_kind,
@@ -92,8 +112,10 @@ def main():
         "before_detection_only": before,
         "after_multi_model_fusion": after,
         "vlm_scene_narration": narration,
-        "note": ("Relative depth is a normalized monocular depth cue "
-                 "(0=near, 1=far); it is not metric distance."),
+        "note": (
+            "Relative depth is a normalized monocular depth cue "
+            "(0=near, 1=far); it is not metric distance."
+        ),
     }
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -105,10 +127,12 @@ def main():
     print("\nAFTER (multi-model fusion):")
     for a in after:
         rd = "n/a" if a["rel_depth"] is None else f"{a['rel_depth']:.3f}"
-        print(f"  {a['object']}: rel_depth={rd}, {a['activity']}, "
-              f"approaching={a['approaching']}, "
-              f"risk={a['collision_risk_pct']}%, "
-              f"confidence={a['decision_confidence']}")
+        print(
+            f"  {a['object']}: rel_depth={rd}, {a['activity']}, "
+            f"approaching={a['approaching']}, "
+            f"risk={a['collision_risk_pct']}%, "
+            f"confidence={a['decision_confidence']}"
+        )
     print(f"\nVLM narration: {narration}")
     print("\nNOTE: rel_depth is relative (0=near, 1=far), not metres.")
     print(f"\nwritten: {out_path}")

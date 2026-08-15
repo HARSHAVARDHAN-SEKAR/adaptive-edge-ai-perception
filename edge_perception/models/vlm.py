@@ -14,6 +14,7 @@ Real backend options (auto-detected):
 Mock backend: composes the description from the fused scene instead of
 pixels — same output contract, zero hardware.
 """
+
 from __future__ import annotations
 
 import base64
@@ -26,9 +27,11 @@ import numpy as np
 from .base import ModelOutput, PerceptionModel, mock_sleep, register
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-PROMPT = ("You are the perception narrator of a mobile robot. In one short "
-          "sentence, describe what is happening in this camera frame and "
-          "any risk to navigation.")
+PROMPT = (
+    "You are the perception narrator of a mobile robot. In one short "
+    "sentence, describe what is happening in this camera frame and "
+    "any risk to navigation."
+)
 
 
 @register("vlm_scene")
@@ -40,28 +43,35 @@ class VlmScene(PerceptionModel):
         req = urllib.request.Request(f"{OLLAMA_URL}/api/tags")
         with urllib.request.urlopen(req, timeout=2) as r:
             tags = json.load(r)
-        ok = any("llava" in m.get("name", "").lower()
-                 or "vila" in m.get("name", "").lower()
-                 for m in tags.get("models", []))
+        ok = any(
+            "llava" in m.get("name", "").lower() or "vila" in m.get("name", "").lower()
+            for m in tags.get("models", [])
+        )
         if not ok:
             raise RuntimeError(
                 "no llava/vila model on the Ollama server — "
-                "run `ollama pull llava && ollama serve`")
+                "run `ollama pull llava && ollama serve`"
+            )
         return True
 
     def _infer_real(self, frame_bgr: np.ndarray) -> ModelOutput:
         out = ModelOutput(self.name, self.task, 0.0)
         import cv2
-        ok, buf = cv2.imencode(".jpg", frame_bgr)
-        payload = json.dumps({
-            "model": "llava",
-            "prompt": PROMPT,
-            "images": [base64.b64encode(buf.tobytes()).decode()],
-            "stream": False,
-        }).encode()
+
+        _ok, buf = cv2.imencode(".jpg", frame_bgr)
+        payload = json.dumps(
+            {
+                "model": "llava",
+                "prompt": PROMPT,
+                "images": [base64.b64encode(buf.tobytes()).decode()],
+                "stream": False,
+            }
+        ).encode()
         req = urllib.request.Request(
-            f"{OLLAMA_URL}/api/generate", data=payload,
-            headers={"Content-Type": "application/json"})
+            f"{OLLAMA_URL}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
         with urllib.request.urlopen(req, timeout=60) as r:
             out.extra["description"] = json.load(r).get("response", "").strip()
         return out
@@ -75,13 +85,16 @@ class VlmScene(PerceptionModel):
             if bright.sum() > 0.02 * h * w:
                 out.extra["description"] = (
                     "A person is visible nearby and may partially block "
-                    "the planned path.")
+                    "the planned path."
+                )
             elif bright.sum() > 0.005 * h * w:
                 out.extra["description"] = (
                     "A person is visible farther away; no immediate "
-                    "obstruction is inferred from this frame.")
+                    "obstruction is inferred from this frame."
+                )
             else:
                 out.extra["description"] = (
                     "The corridor ahead appears clear with static clutter "
-                    "only; navigation risk is low.")
+                    "only; navigation risk is low."
+                )
         return out

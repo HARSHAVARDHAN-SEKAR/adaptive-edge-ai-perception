@@ -10,15 +10,26 @@ readme = "README.md"
 license = { text = "AGPL-3.0-only" }
 requires-python = ">=3.10"
 dependencies = [
-  "numpy>=1.24,<3",
+  "numpy>=1.24,<2",
   "opencv-python-headless>=4.8",
   "psutil>=5.9",
   "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
-real = ["ultralytics>=8.2,<9", "onnx>=1.15", "onnxruntime>=1.17"]
+real = [
+  "ultralytics>=8.2,<9",
+  "onnx>=1.15",
+  "onnxruntime>=1.17",
+  "timm>=0.9",
+]
 dev = ["reportlab>=4.0", "pytest>=8", "ruff>=0.4"]
 
 [tool.setuptools.packages.find]
 include = ["edge_perception*"]
+[tool.ruff.lint]
+ignore = [
+  "BLE001",  # deliberate broad boundaries around optional external backends
+  "S110",    # optional telemetry failure is intentionally non-fatal
+  "SIM115",  # pipeline owns a persistent log handle until close()
+]

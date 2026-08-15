@@ -5,10 +5,10 @@ on. These values are hand-assigned heuristics; calibrated uncertainty would
 require ensembles / MC dropout and ECE/NLL/Brier evaluation — listed as
 future work in the report.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 import numpy as np
 
@@ -24,14 +24,16 @@ class ObjectConfidence:
     depth: float
     tracking: float
     pose: float
-    decision_confidence: float          # heuristic, uncalibrated
+    decision_confidence: float  # heuristic, uncalibrated
 
     def to_dict(self):
-        return {k: round(v, 3) if isinstance(v, float) else v
-                for k, v in self.__dict__.items()}
+        return {
+            k: round(v, 3) if isinstance(v, float) else v
+            for k, v in self.__dict__.items()
+        }
 
 
-def _geo_mean(values: Dict[str, float]) -> float:
+def _geo_mean(values: dict[str, float]) -> float:
     logs, wsum = 0.0, 0.0
     for k, v in values.items():
         w = SOURCE_WEIGHTS[k]
@@ -49,13 +51,18 @@ def estimate(obj: FusedObject, depth_available: bool) -> ObjectConfidence:
     tracking = 0.9 if obj.velocity_px_s is not None else 0.5
     pose = 0.85 if obj.activity not in ("n/a", "unknown") else 0.5
     return ObjectConfidence(
-        obj.object_id, detection, depth, tracking, pose,
-        _geo_mean({"detection": detection, "depth": depth,
-                   "tracking": tracking, "pose": pose}))
+        obj.object_id,
+        detection,
+        depth,
+        tracking,
+        pose,
+        _geo_mean(
+            {"detection": detection, "depth": depth, "tracking": tracking, "pose": pose}
+        ),
+    )
 
 
-def scene_confidence(scene: SceneUnderstanding) -> Optional[float]:
+def scene_confidence(scene: SceneUnderstanding) -> float | None:
     depth_avail = scene.depth_scale is not None
-    confs = [estimate(o, depth_avail).decision_confidence
-             for o in scene.objects]
+    confs = [estimate(o, depth_avail).decision_confidence for o in scene.objects]
     return float(np.mean(confs)) if confs else None

@@ -14,22 +14,24 @@ itself (DDS transport, colcon build) — that part runs on your machine.
 
     python tests/test_ros2_node_sim.py
 """
+
 from __future__ import annotations
 
 import sys
 import time
 import types
 from pathlib import Path
+from typing import ClassVar
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_ws" / "src" / "edge_perception_ros"))
 
-import numpy as np
 
 # ---------------------------------------------------------------------------
 # Faithful mocks of the ROS2 python API surface the node uses
 # ---------------------------------------------------------------------------
+
 
 def _module(name):
     m = types.ModuleType(name)
@@ -54,13 +56,14 @@ class _Param:
 
 class Node:
     # simulate `--ros-args -p backend:=mock` (deterministic, no weights)
-    PARAM_OVERRIDES = {"backend": "mock"}
+    # simulate `--ros-args -p backend:=mock` (deterministic, no weights)
+    PARAM_OVERRIDES: ClassVar[dict[str, str]] = {"backend": "mock"}
 
     def __init__(self, name):
         self._name = name
         self._params = {}
-        self.publishers = {}       # topic -> list of published msgs
-        self.subscriptions = {}    # topic -> callback
+        self.publishers = {}  # topic -> list of published msgs
+        self.subscriptions = {}  # topic -> callback
 
     def declare_parameter(self, k, v):
         self._params[k] = _Param(self.PARAM_OVERRIDES.get(k, v))
@@ -77,12 +80,17 @@ class Node:
         class Pub:
             def publish(self, msg, _t=topic):
                 node.publishers.setdefault(_t, []).append(msg)
+
         return Pub()
 
     def get_logger(self):
         class L:
-            def info(self, m): print(f"[node] {m}")
-            def warn(self, m): print(f"[node][warn] {m}")
+            def info(self, m):
+                print(f"[node] {m}")
+
+            def warn(self, m):
+                print(f"[node][warn] {m}")
+
         return L()
 
     def get_clock(self):
@@ -186,8 +194,7 @@ class _PoseHolder:
 class ObjectHypothesisWithPose:
     def __init__(self):
         self.hypothesis = _Hyp()
-        self.pose = types.SimpleNamespace(
-            pose=types.SimpleNamespace(position=_Point()))
+        self.pose = types.SimpleNamespace(pose=types.SimpleNamespace(position=_Point()))
 
 
 class Detection2D:
@@ -203,9 +210,12 @@ class Detection2DArray:
         self.detections = []
 
 
-for k, v in dict(BoundingBox2D=BoundingBox2D, Detection2D=Detection2D,
-                 Detection2DArray=Detection2DArray,
-                 ObjectHypothesisWithPose=ObjectHypothesisWithPose).items():
+for k, v in {
+    "BoundingBox2D": BoundingBox2D,
+    "Detection2D": Detection2D,
+    "Detection2DArray": Detection2DArray,
+    "ObjectHypothesisWithPose": ObjectHypothesisWithPose,
+}.items():
     setattr(vision_msgs_msg, k, v)
 
 cv_bridge = _module("cv_bridge")
@@ -213,7 +223,7 @@ cv_bridge = _module("cv_bridge")
 
 class CvBridge:
     def imgmsg_to_cv2(self, msg, desired_encoding="bgr8"):
-        return msg.data                      # our fake Image carries the array
+        return msg.data  # our fake Image carries the array
 
 
 cv_bridge.CvBridge = CvBridge
@@ -223,8 +233,9 @@ cv_bridge.CvBridge = CvBridge
 # ---------------------------------------------------------------------------
 import json
 
-from edge_perception.sources import SyntheticSource
 from edge_perception_ros import perception_node as pn
+
+from edge_perception.sources import SyntheticSource
 
 
 def make_msg(frame, t_ns):
@@ -241,17 +252,20 @@ def main():
     assert "/camera/image_raw" in node.subscriptions, "subscription missing"
     cb = node.subscriptions["/camera/image_raw"]
 
-    frames = list(SyntheticSource(n_frames=120,
-                                  event_windows=((30, 100),)).frames())
+    frames = list(SyntheticSource(n_frames=120, event_windows=((30, 100),)).frames())
     for f in frames:
         cb(make_msg(f, time.time_ns()))
 
     pubs = node.publishers
     topics = sorted(pubs)
     print("published topics:", topics)
-    expected = ["/perception/objects", "/perception/risk",
-                "/perception/scene", "/perception/semantic_image_grid",
-                "/perception/status"]
+    expected = [
+        "/perception/objects",
+        "/perception/risk",
+        "/perception/scene",
+        "/perception/semantic_image_grid",
+        "/perception/status",
+    ]
     assert topics == expected, f"topic mismatch: {topics}"
     assert all(len(pubs[t]) == 120 for t in topics), "1 msg per frame per topic"
 
@@ -264,35 +278,42 @@ def main():
     hyp = d.results[0].hypothesis
     assert hyp.class_id and 0 < hyp.score <= 1.0
     # relative depth must NOT be injected into pose.z (it is not metric)
-    assert all(dd.results[0].pose.pose.position.z == 0.0
-               for a in arrays for dd in a.detections), \
-        "relative depth must not be published as metric pose.z"
+    assert all(
+        dd.results[0].pose.pose.position.z == 0.0 for a in arrays for dd in a.detections
+    ), "relative depth must not be published as metric pose.z"
     scenes_j = [json.loads(m.data) for m in pubs["/perception/scene"]]
-    assert any(o.get("rel_depth") is not None
-               for sc in scenes_j for o in sc["objects"]), \
-        "rel_depth missing from scene JSON"
+    assert any(
+        o.get("rel_depth") is not None for sc in scenes_j for o in sc["objects"]
+    ), "rel_depth missing from scene JSON"
     assert all(sc["depth_scale"] in (None, "relative") for sc in scenes_j)
 
     # -- status: modes switched; e2e latency sane ----------------------------
     stats = [json.loads(m.data) for m in pubs["/perception/status"]]
     modes = {s["mode"] for s in stats}
-    assert "PATROL" in modes and modes & {"ALERT", "ENGAGED"}, \
+    assert "PATROL" in modes and modes & {"ALERT", "ENGAGED"}, (
         f"scheduler never escalated: {modes}"
+    )
     lats = [s["e2e_latency_ms"] for s in stats if s["e2e_latency_ms"]]
     assert lats and all(0 < l < 10000 for l in lats), "e2e latency broken"
     # zero/invalid stamps must publish null rather than a bogus number
     zero_msg = make_msg(frames[0], 0)
     cb(zero_msg)
-    assert json.loads(pubs["/perception/status"][-1].data)["e2e_latency_ms"] \
-        is None, "zero timestamp must yield null latency"
+    assert json.loads(pubs["/perception/status"][-1].data)["e2e_latency_ms"] is None, (
+        "zero timestamp must yield null latency"
+    )
     # backend provenance present
     assert all(s["backends"] for s in stats), "backend provenance missing"
     assert all(v == "mock" for s in stats for v in s["backends"].values())
     # bbox center compatibility helper works on this msg layout
     from edge_perception_ros.perception_node import _set_bbox_center
-    bb = BoundingBox2D(); _set_bbox_center(bb, 5.0, 7.0)
-    got = ((bb.center.position.x, bb.center.position.y)
-           if hasattr(bb.center, "position") else (bb.center.x, bb.center.y))
+
+    bb = BoundingBox2D()
+    _set_bbox_center(bb, 5.0, 7.0)
+    got = (
+        (bb.center.position.x, bb.center.position.y)
+        if hasattr(bb.center, "position")
+        else (bb.center.x, bb.center.y)
+    )
     assert got == (5.0, 7.0)
 
     # -- risk: rises during the event ---------------------------------------
@@ -314,10 +335,11 @@ def main():
 
     node.destroy_node()
     print(f"\nmodes seen: {sorted(modes)}")
-    print(f"e2e latency: mean {sum(lats)/len(lats):.1f} ms, "
-          f"max {max(lats):.1f} ms")
-    print(f"peak risk during event: {max(risks[30:100]):.2f} "
-          f"(calm baseline {max(risks[:25]):.2f})")
+    print(f"e2e latency: mean {sum(lats) / len(lats):.1f} ms, max {max(lats):.1f} ms")
+    print(
+        f"peak risk during event: {max(risks[30:100]):.2f} "
+        f"(calm baseline {max(risks[:25]):.2f})"
+    )
     print(f"semantic labels observed: {sorted(labels - {'free'})}")
     print("\nROS2 NODE SIMULATION: ALL CHECKS PASSED")
 

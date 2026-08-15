@@ -8,21 +8,23 @@ Sources, in order of preference:
 Also tracks a rolling FPS estimate from pipeline ticks — FPS is the single
 most important signal for the scheduler ("are we keeping up?").
 """
+
 from __future__ import annotations
 
 import collections
 import time
-from dataclasses import dataclass, asdict
-from typing import Deque, Optional
+from dataclasses import asdict, dataclass
 
 try:
     import psutil
+
     _HAS_PSUTIL = True
 except Exception:  # pragma: no cover
     _HAS_PSUTIL = False
 
 try:
     import pynvml
+
     pynvml.nvmlInit()
     _NVML_HANDLE = pynvml.nvmlDeviceGetHandleByIndex(0)
     _HAS_NVML = True
@@ -31,7 +33,8 @@ except Exception:  # pragma: no cover
     _NVML_HANDLE = None
 
 try:
-    from jtop import jtop as _jtop           # jetson-stats, Jetson only
+    from jtop import jtop as _jtop  # jetson-stats, Jetson only
+
     _HAS_JTOP = True
 except Exception:  # pragma: no cover
     _HAS_JTOP = False
@@ -42,10 +45,10 @@ class ResourceSnapshot:
     timestamp: float
     cpu_percent: float
     ram_percent: float
-    gpu_percent: float          # -1 if unavailable
-    gpu_mem_percent: float      # -1 if unavailable
-    power_watts: float          # -1 if unavailable
-    fps: float                  # rolling pipeline FPS
+    gpu_percent: float  # -1 if unavailable
+    gpu_mem_percent: float  # -1 if unavailable
+    power_watts: float  # -1 if unavailable
+    fps: float  # rolling pipeline FPS
     source: str
 
     def to_dict(self):
@@ -54,7 +57,9 @@ class ResourceSnapshot:
 
 class ResourceMonitor:
     def __init__(self, fps_window: int = 30):
-        self._tick_times: Deque[float] = collections.deque(maxlen=fps_window)
+        self._tick_times: collections.deque[float] = collections.deque(
+            maxlen=fps_window
+        )
         self._jtop_ctx = None
         if _HAS_JTOP:
             try:
@@ -101,8 +106,7 @@ class ResourceMonitor:
             except Exception:
                 pass
 
-        return ResourceSnapshot(time.time(), cpu, ram, gpu, gmem, pwr,
-                                self.fps, source)
+        return ResourceSnapshot(time.time(), cpu, ram, gpu, gmem, pwr, self.fps, source)
 
     def close(self) -> None:
         if self._jtop_ctx is not None:

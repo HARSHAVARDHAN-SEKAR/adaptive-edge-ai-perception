@@ -3,6 +3,7 @@
 Feed it 500-1000 frames sampled from real missions — calibration data must
 match deployment distribution or INT8 accuracy will silently collapse.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,10 +16,16 @@ try:  # Jetson / TensorRT environments only
     import tensorrt as trt
 
     class ImageFolderCalibrator(trt.IInt8EntropyCalibrator2):
-        def __init__(self, folder: str, imgsz: int = 640, batch: int = 8,
-                     cache: str = "int8_calib.cache"):
+        def __init__(
+            self,
+            folder: str,
+            imgsz: int = 640,
+            batch: int = 8,
+            cache: str = "int8_calib.cache",
+        ):
             super().__init__()
             import cv2
+
             self.paths = sorted(Path(folder).glob("*.[jp][pn]g"))
             self.imgsz, self.batch, self.cache = imgsz, batch, cache
             self.idx = 0
@@ -32,7 +39,7 @@ try:  # Jetson / TensorRT environments only
             if self.idx + self.batch > len(self.paths):
                 return None
             imgs = []
-            for p in self.paths[self.idx:self.idx + self.batch]:
+            for p in self.paths[self.idx : self.idx + self.batch]:
                 img = self._cv2.imread(str(p))
                 img = self._cv2.resize(img, (self.imgsz, self.imgsz))
                 img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
@@ -50,6 +57,7 @@ try:  # Jetson / TensorRT environments only
             Path(self.cache).write_bytes(cache)
 
 except Exception:  # pragma: no cover - laptop without TensorRT
+
     class ImageFolderCalibrator:  # type: ignore[no-redef]
         def __init__(self, *a, **k):
             raise RuntimeError("TensorRT + pycuda required (Jetson/JetPack).")

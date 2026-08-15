@@ -9,6 +9,7 @@ Backend contract (strict — a user must never unknowingly get mock results):
 
 Every ModelOutput reports requested_backend and actual_backend.
 """
+
 from __future__ import annotations
 
 import time
@@ -16,7 +17,7 @@ import warnings
 import zlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -29,15 +30,16 @@ class BackendUnavailableError(RuntimeError):
 # Result types
 # --------------------------------------------------------------------------
 
+
 @dataclass
 class Detection:
     label: str
     confidence: float
-    box_xyxy: Tuple[float, float, float, float]   # pixels
-    track_id: Optional[int] = None
+    box_xyxy: tuple[float, float, float, float]  # pixels
+    track_id: int | None = None
 
     @property
-    def center(self) -> Tuple[float, float]:
+    def center(self) -> tuple[float, float]:
         x1, y1, x2, y2 = self.box_xyxy
         return (0.5 * (x1 + x2), 0.5 * (y1 + y2))
 
@@ -51,15 +53,15 @@ class Detection:
 class SegmentationMask:
     label: str
     confidence: float
-    mask: np.ndarray                                # HxW bool
-    box_xyxy: Optional[Tuple[float, float, float, float]] = None
+    mask: np.ndarray  # HxW bool
+    box_xyxy: tuple[float, float, float, float] | None = None
 
 
 @dataclass
 class PoseKeypoints:
     confidence: float
-    keypoints_xy: np.ndarray                        # (17, 2)
-    keypoints_conf: np.ndarray                      # (17,)
+    keypoints_xy: np.ndarray  # (17, 2)
+    keypoints_conf: np.ndarray  # (17,)
     activity: str = "unknown"
 
 
@@ -69,18 +71,19 @@ class ModelOutput:
     task: str
     latency_ms: float
     requested_backend: str = "auto"
-    actual_backend: str = "mock"                    # "real" | "mock"
-    detections: List[Detection] = field(default_factory=list)
-    masks: List[SegmentationMask] = field(default_factory=list)
-    depth_map: Optional[np.ndarray] = None          # HxW float32 RELATIVE depth
-    depth_scale: str = "relative"                   # never metric from mono
-    poses: List[PoseKeypoints] = field(default_factory=list)
-    extra: Dict[str, Any] = field(default_factory=dict)
+    actual_backend: str = "mock"  # "real" | "mock"
+    detections: list[Detection] = field(default_factory=list)
+    masks: list[SegmentationMask] = field(default_factory=list)
+    depth_map: np.ndarray | None = None  # HxW float32 RELATIVE depth
+    depth_scale: str = "relative"  # never metric from mono
+    poses: list[PoseKeypoints] = field(default_factory=list)
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------
 # Model interface
 # --------------------------------------------------------------------------
+
 
 class PerceptionModel(ABC):
     task: str = "generic"
@@ -113,16 +116,19 @@ class PerceptionModel(ABC):
                 self._real_ready = False
                 if self.backend == "real":
                     raise BackendUnavailableError(
-                        f"{self.name}: backend='real' requested but "
-                        f"unavailable: {e}") from e
+                        f"{self.name}: backend='real' requested but unavailable: {e}"
+                    ) from e
             if self.backend == "real" and not self._real_ready:
                 raise BackendUnavailableError(
                     f"{self.name}: backend='real' requested but the real "
-                    "implementation could not be loaded")
+                    "implementation could not be loaded"
+                )
             if self.backend == "auto" and not self._real_ready:
                 warnings.warn(
                     f"[{self.name}] real backend unavailable — FALLING BACK "
-                    "TO MOCK outputs (backend='auto')", stacklevel=2)
+                    "TO MOCK outputs (backend='auto')",
+                    stacklevel=2,
+                )
         self._load_time_s = time.perf_counter() - t0
         self._loaded = True
 
@@ -140,8 +146,11 @@ class PerceptionModel(ABC):
         if not self._loaded:
             self.load()
         t0 = time.perf_counter()
-        out = (self._infer_real(frame_bgr) if self._real_ready
-               else self._infer_mock(frame_bgr))
+        out = (
+            self._infer_real(frame_bgr)
+            if self._real_ready
+            else self._infer_mock(frame_bgr)
+        )
         out.latency_ms = (time.perf_counter() - t0) * 1000.0
         out.model_name = self.name
         out.task = self.task
@@ -169,7 +178,7 @@ class PerceptionModel(ABC):
 # Registry
 # --------------------------------------------------------------------------
 
-_REGISTRY: Dict[str, type] = {}
+_REGISTRY: dict[str, type] = {}
 
 
 def register(name: str):
@@ -177,6 +186,7 @@ def register(name: str):
         cls.name = name
         _REGISTRY[name] = cls
         return cls
+
     return deco
 
 
@@ -186,7 +196,7 @@ def create(name: str, **kwargs) -> PerceptionModel:
     return _REGISTRY[name](**kwargs)
 
 
-def available() -> List[str]:
+def available() -> list[str]:
     return sorted(_REGISTRY)
 
 
@@ -195,16 +205,17 @@ def available() -> List[str]:
 # from it so boxes, masks, depth and pose are mutually consistent)
 # --------------------------------------------------------------------------
 
+
 @dataclass
 class MockObject:
     label: str
-    box_xyxy: Tuple[float, float, float, float]
-    rel_depth: float            # 0 = nearest .. 1 = farthest (RELATIVE)
+    box_xyxy: tuple[float, float, float, float]
+    rel_depth: float  # 0 = nearest .. 1 = farthest (RELATIVE)
     has_pose: bool = False
 
 
 def _frame_seed(frame: np.ndarray) -> int:
-    return int(frame[::64, ::64].sum()) % (2 ** 31)
+    return int(frame[::64, ::64].sum()) % (2**31)
 
 
 def mock_rng(frame: np.ndarray, salt: str = "") -> np.random.Generator:
@@ -213,22 +224,26 @@ def mock_rng(frame: np.ndarray, salt: str = "") -> np.random.Generator:
     return np.random.default_rng((_frame_seed(frame) ^ salt32) & 0x7FFFFFFF)
 
 
-def mock_world(frame: np.ndarray) -> List[MockObject]:
+def mock_world(frame: np.ndarray) -> list[MockObject]:
     """Deterministic synthetic scene truth for a frame."""
     rng = np.random.default_rng(_frame_seed(frame))
     h, w = frame.shape[:2]
-    objs: List[MockObject] = []
+    objs: list[MockObject] = []
 
     # the scripted intruder: a large bright region -> a close person
     bright = frame.mean(axis=2) > 150
     if bright.sum() > 0.005 * h * w:
         ys, xs = np.nonzero(bright)
-        box = (float(xs.min()), float(ys.min()),
-               float(xs.max()), float(ys.max()))
+        box = (float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max()))
         size_frac = (box[2] - box[0]) / w
-        objs.append(MockObject("person", box,
-                               rel_depth=float(np.clip(0.55 - size_frac, 0.02, 0.9)),
-                               has_pose=True))
+        objs.append(
+            MockObject(
+                "person",
+                box,
+                rel_depth=float(np.clip(0.55 - size_frac, 0.02, 0.9)),
+                has_pose=True,
+            )
+        )
 
     # Ambient synthetic patrol clutter is deliberately benign. Scripted
     # bright event windows are the only person intrusions, which keeps the
@@ -246,10 +261,14 @@ def mock_world(frame: np.ndarray) -> List[MockObject]:
             y1 = rng.uniform(0, h - bh)
             depth = rng.uniform(0.3, 0.9)
         x1 = rng.uniform(0, w - bw)
-        objs.append(MockObject(label,
-                               (x1, y1, x1 + bw, min(y1 + bh, h - 1.0)),
-                               rel_depth=float(depth),
-                               has_pose=(label == "person")))
+        objs.append(
+            MockObject(
+                label,
+                (x1, y1, x1 + bw, min(y1 + bh, h - 1.0)),
+                rel_depth=float(depth),
+                has_pose=(label == "person"),
+            )
+        )
     return objs
 
 

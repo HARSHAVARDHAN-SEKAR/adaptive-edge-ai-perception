@@ -1,4 +1,5 @@
 """Test suite — runs on any machine (mock backend, no GPU needed)."""
+
 import sys
 import warnings
 from pathlib import Path
@@ -10,13 +11,22 @@ import numpy as np
 from edge_perception.fusion.perception_fusion import PerceptionFusion
 from edge_perception.fusion.uncertainty import scene_confidence
 from edge_perception.models import base as model_base
-from edge_perception.models import detection, segmentation, depth, pose, vlm  # noqa: F401
+from edge_perception.models import (  # noqa: F401
+    depth,
+    detection,
+    pose,
+    segmentation,
+    vlm,
+)
 from edge_perception.models.base import BackendUnavailableError
 from edge_perception.pipeline import PerceptionPipeline
-from edge_perception.scheduler.model_selector import (AdaptiveScheduler,
-                                                      Attention, Mode,
-                                                      Resource,
-                                                      SchedulerConfig)
+from edge_perception.scheduler.model_selector import (
+    AdaptiveScheduler,
+    Attention,
+    Mode,
+    Resource,
+    SchedulerConfig,
+)
 from edge_perception.scheduler.resource_monitor import ResourceSnapshot
 from edge_perception.sources import SyntheticSource
 
@@ -29,8 +39,15 @@ def _snap(fps=20.0, gpu=40.0):
 
 def test_registry_and_models():
     names = model_base.available()
-    assert {"yolo_nano", "yolo_small", "yolo_large", "yolo_nano_seg",
-            "midas_small", "yolo_pose", "vlm_scene"} <= set(names)
+    assert {
+        "yolo_nano",
+        "yolo_small",
+        "yolo_large",
+        "yolo_nano_seg",
+        "midas_small",
+        "yolo_pose",
+        "vlm_scene",
+    } <= set(names)
     for n in set(names):
         m = model_base.create(n, backend="mock")
         out = m(FRAME)
@@ -43,7 +60,7 @@ def test_registry_and_models():
 def test_mock_world_consistency():
     """Detection, masks, depth and pose must derive from the SAME world."""
     f = FRAME.copy()
-    f[100:230, 120:200] = 190          # bright intruder -> person
+    f[100:230, 120:200] = 190  # bright intruder -> person
     det = model_base.create("yolo_large", backend="mock")(f)
     seg = model_base.create("yolo_nano_seg", backend="mock")(f)
     dep = model_base.create("midas_small", backend="mock")(f)
@@ -52,10 +69,10 @@ def test_mock_world_consistency():
     assert persons, "intruder person must be detected"
     p = max(persons, key=lambda d: d.area)
     # a mask with the same class overlapping the same box
-    assert any(m.label == "person"
-               and m.box_xyxy == p.box_xyxy for m in seg.masks)
+    assert any(m.label == "person" and m.box_xyxy == p.box_xyxy for m in seg.masks)
     # skeleton center inside the person box
     from edge_perception.models.pose import pose_center
+
     assert pos.poses, "pose model must find the person"
     kx, ky = pose_center(pos.poses[0].keypoints_xy, pos.poses[0].keypoints_conf)
     x1, y1, x2, y2 = p.box_xyxy
@@ -69,6 +86,7 @@ def test_mock_world_consistency():
 def test_real_backend_fails_hard_when_unavailable(monkeypatch=None):
     """backend='real' must never silently return mock results."""
     import builtins
+
     orig_import = builtins.__import__
 
     def no_ultralytics(name, *a, **k):
@@ -108,20 +126,20 @@ def test_scheduler_escalation_and_hysteresis():
     assert s.decide(0.1, 0.9, _snap()).mode == Mode.PATROL
     assert s.decide(0.5, 0.9, _snap()).mode == Mode.ALERT
     assert s.decide(0.8, 0.9, _snap()).mode == Mode.ENGAGED
-    assert s.decide(0.1, 0.9, _snap()).mode == Mode.ENGAGED   # hysteresis
+    assert s.decide(0.1, 0.9, _snap()).mode == Mode.ENGAGED  # hysteresis
     for _ in range(5):
         d = s.decide(0.1, 0.9, _snap())
     assert d.mode == Mode.PATROL
-    assert s.decide(0.1, 0.30, _snap()).mode == Mode.ALERT    # second opinion
+    assert s.decide(0.1, 0.30, _snap()).mode == Mode.ALERT  # second opinion
 
 
 def test_sustained_starvation_does_not_oscillate():
-    s = AdaptiveScheduler(SchedulerConfig(min_fps=6.0,
-                                          resource_recovery_frames=10))
+    s = AdaptiveScheduler(SchedulerConfig(min_fps=6.0, resource_recovery_frames=10))
     modes = [s.decide(0.1, 0.9, _snap(fps=2.0)).mode for _ in range(60)]
     assert modes[0] == Mode.DEGRADED
-    assert all(m == Mode.DEGRADED for m in modes), \
+    assert all(m == Mode.DEGRADED for m in modes), (
         f"oscillation under sustained starvation: {set(modes)}"
+    )
 
 
 def test_degraded_exits_only_after_resource_recovery():
@@ -131,8 +149,9 @@ def test_degraded_exits_only_after_resource_recovery():
         assert s.decide(0.1, 0.9, _snap(fps=2.0)).mode == Mode.DEGRADED
     # resources recover — must stay DEGRADED for recovery_frames first
     for i in range(cfg.resource_recovery_frames - 1):
-        assert s.decide(0.1, 0.9, _snap(fps=30.0)).mode == Mode.DEGRADED, \
-            f"left DEGRADED after only {i+1} healthy frames"
+        assert s.decide(0.1, 0.9, _snap(fps=30.0)).mode == Mode.DEGRADED, (
+            f"left DEGRADED after only {i + 1} healthy frames"
+        )
     assert s.decide(0.1, 0.9, _snap(fps=30.0)).mode == Mode.PATROL
 
 
@@ -141,8 +160,8 @@ def test_high_risk_under_starvation_uses_safe_plan():
     records the ENGAGED attention demand while the plan stays feasible."""
     s = AdaptiveScheduler()
     d = s.decide(0.9, 0.9, _snap(fps=2.0))
-    assert d.mode == Mode.DEGRADED             # feasible plan
-    assert d.attention == Attention.ENGAGED    # demand not silently dropped
+    assert d.mode == Mode.DEGRADED  # feasible plan
+    assert d.attention == Attention.ENGAGED  # demand not silently dropped
     assert d.resource == Resource.CRITICAL
     assert "ENGAGED" in d.reason
 
@@ -175,6 +194,7 @@ def test_fusion_and_uncertainty():
 def test_tracking_requires_same_class():
     fusion = PerceptionFusion()
     from edge_perception.models.base import Detection, ModelOutput
+
     o1 = ModelOutput("m", "detect", 0.0)
     o1.detections = [Detection("person", 0.9, (100, 100, 150, 200))]
     s1 = fusion.fuse([o1], (240, 320, 3))
@@ -182,8 +202,9 @@ def test_tracking_requires_same_class():
     o2 = ModelOutput("m", "detect", 0.0)
     o2.detections = [Detection("chair", 0.9, (102, 102, 152, 202))]
     s2 = fusion.fuse([o2], (240, 320, 3))
-    assert s2.objects[0].object_id != pid, \
+    assert s2.objects[0].object_id != pid, (
         "a chair must not inherit a person's track id"
+    )
 
 
 def test_pipeline_end_to_end_adaptive():
@@ -199,29 +220,30 @@ def test_pipeline_end_to_end_adaptive():
 
 
 def test_vlm_narration_on_engagement_and_expiry():
-    pipe = PerceptionPipeline(backend="mock", adaptive=True,
-                              vlm_on_engagement=True)
+    pipe = PerceptionPipeline(backend="mock", adaptive=True, vlm_on_engagement=True)
     pipe.narration_ttl_frames = 15
     frames = SyntheticSource(n_frames=160, event_windows=((20, 60),)).frames()
     results = pipe.run(frames)
     pipe.close()
     assert any(r.narration for r in results), "VLM should narrate on ENGAGED"
-    switches = [r for r in results if r.decision.switched
-                and r.decision.mode == Mode.ENGAGED]
+    switches = [
+        r for r in results if r.decision.switched and r.decision.mode == Mode.ENGAGED
+    ]
     assert any("vlm_scene" in r.model_latencies for r in switches)
-    steady = [r for r in results if r.decision.mode == Mode.ENGAGED
-              and not r.decision.switched]
+    steady = [
+        r
+        for r in results
+        if r.decision.mode == Mode.ENGAGED and not r.decision.switched
+    ]
     assert all("vlm_scene" not in r.model_latencies for r in steady)
     # expiry: narration must be cleared by the end of the calm tail
     tail = results[-10:]
     assert all(r.narration is None for r in tail), "stale narration not expired"
 
 
-
 def test_vlm_narration_absolute_ttl_while_engaged():
     """Narration must expire even if elevated risk keeps the mode ENGAGED."""
-    pipe = PerceptionPipeline(backend="mock", adaptive=True,
-                              vlm_on_engagement=True)
+    pipe = PerceptionPipeline(backend="mock", adaptive=True, vlm_on_engagement=True)
     pipe.narration_ttl_frames = 8
     frames = SyntheticSource(n_frames=80, event_windows=((5, 75),)).frames()
     results = pipe.run(frames)
@@ -239,9 +261,12 @@ def test_vlm_narration_absolute_ttl_while_engaged():
 
 
 def test_degraded_frame_skip():
-    pipe = PerceptionPipeline(backend="mock", adaptive=True,
-                              scheduler_config=SchedulerConfig(min_fps=10_000),
-                              degraded_frame_skip=2)
+    pipe = PerceptionPipeline(
+        backend="mock",
+        adaptive=True,
+        scheduler_config=SchedulerConfig(min_fps=10_000),
+        degraded_frame_skip=2,
+    )
     results = pipe.run(list(SyntheticSource(n_frames=40).frames()))
     pipe.close()
     degraded = [r for r in results if r.decision.mode == Mode.DEGRADED]
@@ -251,8 +276,9 @@ def test_degraded_frame_skip():
 
 
 def test_pipeline_fixed_baseline():
-    pipe = PerceptionPipeline(backend="mock", adaptive=False,
-                              fixed_models=["yolo_nano"])
+    pipe = PerceptionPipeline(
+        backend="mock", adaptive=False, fixed_models=["yolo_nano"]
+    )
     r = pipe.process(FRAME)
     pipe.close()
     assert r.decision.models == ["yolo_nano"]
