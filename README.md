@@ -363,6 +363,13 @@ docs/make_street_scene_report.py
 
 [View the real CUDA street-scene validation report](docs/street_scene_real_inference_report.pdf)
 
+### Real CUDA street-scene demo
+
+[▶ Processed real CUDA perception video](assets/street_test_real_cuda_demo.mp4)
+
+The video shows the original urban scene followed by the processed real-model perception output. It is functional evidence of the real CUDA inference path, not an accuracy benchmark.
+
+
 ### Machine-readable output
 
 [View the real CUDA inference JSON](assets/street_test_real_cuda.json)
