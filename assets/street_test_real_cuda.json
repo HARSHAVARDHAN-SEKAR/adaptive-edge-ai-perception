@@ -1,0 +1,285 @@
+{
+  "input_kind": "image",
+  "requested_backend": "real",
+  "backends": {
+    "yolo_nano": {
+      "requested": "real",
+      "actual": "real"
+    },
+    "yolo_large": {
+      "requested": "real",
+      "actual": "real"
+    },
+    "yolo_nano_seg": {
+      "requested": "real",
+      "actual": "real"
+    },
+    "midas_small": {
+      "requested": "real",
+      "actual": "real"
+    },
+    "yolo_pose": {
+      "requested": "real",
+      "actual": "real"
+    },
+    "vlm_scene": {
+      "requested": "real",
+      "actual": "unavailable",
+      "error": "vlm_scene: backend='real' requested but unavailable: no llava/vila model on the Ollama server \u2014 run `ollama pull llava && ollama serve`"
+    }
+  },
+  "before_detection_only": [
+    "car detected",
+    "car detected",
+    "person detected",
+    "person detected",
+    "person detected",
+    "person detected",
+    "person detected",
+    "car detected",
+    "person detected",
+    "person detected",
+    "person detected",
+    "person detected",
+    "car detected",
+    "person detected",
+    "truck detected",
+    "car detected",
+    "person detected",
+    "person detected",
+    "person detected",
+    "car detected",
+    "car detected",
+    "person detected",
+    "car detected"
+  ],
+  "after_multi_model_fusion": [
+    {
+      "object": "car",
+      "rel_depth": 0.627,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 30,
+      "decision_confidence": 0.75
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.654,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 29,
+      "decision_confidence": 0.73
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.578,
+      "depth_scale": "relative",
+      "activity": "upright",
+      "approaching": false,
+      "collision_risk_pct": 34,
+      "decision_confidence": 0.79
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.684,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 28,
+      "decision_confidence": 0.72
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.679,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 30,
+      "decision_confidence": 0.71
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.749,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 25,
+      "decision_confidence": 0.69
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.554,
+      "depth_scale": "relative",
+      "activity": "upright",
+      "approaching": false,
+      "collision_risk_pct": 34,
+      "decision_confidence": 0.77
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.693,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 29,
+      "decision_confidence": 0.69
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.669,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 30,
+      "decision_confidence": 0.69
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.571,
+      "depth_scale": "relative",
+      "activity": "upright",
+      "approaching": false,
+      "collision_risk_pct": 33,
+      "decision_confidence": 0.75
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.66,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 30,
+      "decision_confidence": 0.69
+    },
+    {
+      "object": "truck",
+      "rel_depth": 0.695,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 16,
+      "decision_confidence": 0.67
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.555,
+      "depth_scale": "relative",
+      "activity": "upright",
+      "approaching": false,
+      "collision_risk_pct": 32,
+      "decision_confidence": 0.73
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.566,
+      "depth_scale": "relative",
+      "activity": "upright",
+      "approaching": false,
+      "collision_risk_pct": 31,
+      "decision_confidence": 0.72
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.65,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 29,
+      "decision_confidence": 0.66
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.764,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 24,
+      "decision_confidence": 0.61
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.56,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 29,
+      "decision_confidence": 0.62
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.765,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 23,
+      "decision_confidence": 0.56
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.7,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 25,
+      "decision_confidence": 0.56
+    },
+    {
+      "object": "truck",
+      "rel_depth": 0.788,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 16,
+      "decision_confidence": 0.53
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.78,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 22,
+      "decision_confidence": 0.52
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.594,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 26,
+      "decision_confidence": 0.54
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.732,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 23,
+      "decision_confidence": 0.51
+    },
+    {
+      "object": "person",
+      "rel_depth": 0.798,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 23,
+      "decision_confidence": 0.48
+    },
+    {
+      "object": "car",
+      "rel_depth": 0.694,
+      "depth_scale": "relative",
+      "activity": "n/a",
+      "approaching": false,
+      "collision_risk_pct": 22,
+      "decision_confidence": 0.46
+    }
+  ],
+  "vlm_scene_narration": "",
+  "note": "Relative depth is a normalized monocular depth cue (0=near, 1=far); it is not metric distance."
+}
